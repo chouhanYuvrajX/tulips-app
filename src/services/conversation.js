@@ -1,64 +1,30 @@
-const { v4: uuidv4 } = require('uuid');
+const { db } = require('./firebase.js');
 
-/**
- * In-memory conversation history store.
- * Stores the last 10 messages per conversation.
- * Structure: Map<conversationId, Array<{ role, content }>>
- */
-const conversations = new Map();
-const MAX_HISTORY = 10;
+// Firebase se conversation history laana (Vora purani baatein yaad karega)
+async function getHistory(conversationId) {
+    const ref = db.ref(`conversations/${conversationId}/messages`);
+    // Sirf last 20 messages la rahe hain taaki AI confuse na ho aur fast chale
+    const snapshot = await ref.limitToLast(20).once('value'); 
+    
+    if (!snapshot.exists()) {
+        return [];
+    }
 
-/**
- * Creates a new conversation and returns its ID.
- * @returns {string} conversationId
- */
-function createConversation() {
-  const id = uuidv4();
-  conversations.set(id, []);
-  return id;
+    const messages = [];
+    snapshot.forEach((childSnapshot) => {
+        messages.push(childSnapshot.val());
+    });
+    
+    return messages;
 }
 
-/**
- * Adds a message to a conversation's history.
- * Trims to the last MAX_HISTORY messages.
- * @param {string} conversationId
- * @param {string} role - 'user' or 'assistant'
- * @param {string} content
- */
-function addMessage(conversationId, role, content) {
-  if (!conversations.has(conversationId)) {
-    conversations.set(conversationId, []);
-  }
-
-  const history = conversations.get(conversationId);
-  history.push({ role, content });
-
-  // Keep only the last MAX_HISTORY messages
-  if (history.length > MAX_HISTORY) {
-    conversations.set(conversationId, history.slice(-MAX_HISTORY));
-  }
-}
-
-/**
- * Gets the message history for a conversation.
- * @param {string} conversationId
- * @returns {Array<{ role, content }>}
- */
-function getHistory(conversationId) {
-  return conversations.get(conversationId) || [];
-}
-
-/**
- * Deletes a conversation's history.
- * @param {string} conversationId
- */
-function deleteConversation(conversationId) {
-  conversations.delete(conversationId);
+// Firebase mein nayi message save karna (Vora nayi baatein yaad rakhega)
+async function addMessage(conversationId, role, content) {
+    const ref = db.ref(`conversations/${conversationId}/messages`);
+    await ref.push({ role, content });
 }
 
 module.exports = {
-  createConversation,
-  addMessage,
-  getHistory,
-  deleteConversation,
+    getHistory,
+    addMessage
 };
