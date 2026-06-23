@@ -1,29 +1,24 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const chatRoutes = require('./routes/chat');
-const errorHandler = require('./middleware/errorHandler');
+const chatRoute = require('./routes/chat');
+require('dotenv').config();
+require('./services/firebase');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
+// CORS allow karo sab origins se
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Routes
+app.use('/api/chat', chatRoute);
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Routes
-app.use('/api/chat', chatRoutes);
-
-// Error handling
-app.use(errorHandler);
-
-// Start server
 app.listen(PORT, () => {
-  console.log(`Tulip server running on http://localhost:${PORT}`);
-  console.log(`POST /api/chat - Send a message to the AI companion`);
+  console.log(`Tulip backend running on port ${PORT}`);
 });
