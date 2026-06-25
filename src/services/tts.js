@@ -7,7 +7,7 @@ const generateSpeech = async (text) => {
       outputFormat: 'audio-24khz-96kbitrate-mono-mp3'
     });
     const base64Audio = tts.toBase64();
-    return `data:audio/mpeg;base64,${base64Audio}`;
+    return base64Audio;
   } catch (error) {
     console.error('TTS Error:', error.message);
     return null;
