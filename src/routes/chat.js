@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
         res.json({ 
             reply: aiReply, 
             conversationId, 
-            audioUrl: audioBase64 ? `${req.protocol}://${req.get('host')}/audio/${audioId}` : null
+            audioUrl: audioBase64 ? `https://${req.get('host')}/audio/${audioId}` : null
         });
     } catch (error) {
         console.error('Error in /api/chat:', error);
