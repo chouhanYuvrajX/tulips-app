@@ -13,7 +13,17 @@ app.use(express.json());
 
 // Routes
 app.use('/api/chat', chatRoute);
-
+const path = require('path');
+const fs = require('fs');
+app.get('/audio/:id', (req, res) => {
+  const filePath = path.join('/tmp', `${req.params.id}.mp3`);
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'audio/mpeg');
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.status(404).json({ error: 'Audio not found' });
+  }
+});
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
