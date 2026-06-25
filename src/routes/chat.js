@@ -3,8 +3,6 @@ const router = express.Router();
 const { getAIResponse } = require('../services/ai.js');
 const { addMessage, getHistory } = require('../services/conversation.js');
 const { generateSpeech } = require('../services/tts.js');
-const path = require('path');
-const fs = require('fs');
 
 router.post('/', async (req, res) => {
     const { message, conversationId } = req.body;
@@ -18,16 +16,10 @@ router.post('/', async (req, res) => {
         await addMessage(conversationId, 'assistant', aiReply);
         const audioBase64 = await generateSpeech(aiReply);
 
-        const audioId = Date.now().toString();
-        const audioPath = path.join('/tmp', `${audioId}.mp3`);
-        if (audioBase64) {
-            fs.writeFileSync(audioPath, Buffer.from(audioBase64, 'base64'));
-        }
-
         res.json({ 
             reply: aiReply, 
             conversationId, 
-            audioUrl: audioBase64 ? `https://${req.get('host')}/audio/${audioId}` : null
+            audioBase64: audioBase64 || null
         });
     } catch (error) {
         console.error('Error in /api/chat:', error);
