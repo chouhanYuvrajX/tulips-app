@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const chatRoute = require('./routes/chat');
+const authRoute = require('./routes/auth');
 require('dotenv').config();
 require('./services/firebase');
 
@@ -13,6 +14,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/chat', chatRoute);
+app.use('/api/auth', authRoute);
 const path = require('path');
 const fs = require('fs');
 app.get('/audio/:id', (req, res) => {
