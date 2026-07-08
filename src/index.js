@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const chatRoute = require('./routes/chat');
 const authRoute = require('./routes/auth');
+const checkSecret = require('./middleware/checkSecret');
 require('dotenv').config();
 require('./services/firebase');
 
@@ -13,11 +14,11 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/chat', chatRoute);
+app.use('/api/chat', checkSecret, chatRoute);
 app.use('/api/auth', authRoute);
 const path = require('path');
 const fs = require('fs');
-app.get('/audio/:id', (req, res) => {
+app.get('/audio/:id', checkSecret, (req, res) => {
   const filePath = path.join('/tmp', `${req.params.id}.mp3`);
   if (fs.existsSync(filePath)) {
     res.setHeader('Content-Type', 'audio/mpeg');
