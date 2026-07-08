@@ -1,8 +1,9 @@
 const { db } = require('./firebase.js');
 
 // Firebase se conversation history laana (Vora purani baatein yaad karega)
-async function getHistory(conversationId) {
-    const ref = db.ref(`conversations/${conversationId}/messages`);
+// Stopgap namespacing until real Firebase Auth-based userId lands (frontend task F2)
+async function getHistory(userId, conversationId) {
+    const ref = db.ref(`conversations/${userId}/${conversationId}/messages`);
     // Sirf last 20 messages la rahe hain taaki AI confuse na ho aur fast chale
     const snapshot = await ref.limitToLast(20).once('value'); 
     
@@ -19,8 +20,9 @@ async function getHistory(conversationId) {
 }
 
 // Firebase mein nayi message save karna (Vora nayi baatein yaad rakhega)
-async function addMessage(conversationId, role, content) {
-    const ref = db.ref(`conversations/${conversationId}/messages`);
+// Stopgap namespacing until real Firebase Auth-based userId lands (frontend task F2)
+async function addMessage(userId, conversationId, role, content) {
+    const ref = db.ref(`conversations/${userId}/${conversationId}/messages`);
     await ref.push({ role, content });
 }
 
