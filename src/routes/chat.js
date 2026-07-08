@@ -6,7 +6,7 @@ const { addMessage, getHistory } = require('../services/conversation.js');
 const { generateSpeech } = require('../services/tts.js');
 
 router.post('/', async (req, res) => {
-    const { message, conversationId, companionId } = req.body;
+    const { message, conversationId, companionId, language, voiceSpeed, voiceEnabled } = req.body;
     if (!message || !conversationId) {
         return res.status(400).json({ error: 'Message and conversationId are required' });
     }
@@ -16,7 +16,11 @@ router.post('/', async (req, res) => {
         const systemPrompt = getSystemPrompt(companionId);
         const aiReply = await getAIResponse(message, history, systemPrompt);
         await addMessage(conversationId, 'assistant', aiReply);
-        const audioBase64 = await generateSpeech(aiReply);
+
+        let audioBase64 = null;
+        if (voiceEnabled !== false) {
+            audioBase64 = await generateSpeech(aiReply, { language, voiceSpeed });
+        }
 
         res.json({ 
             reply: aiReply, 
