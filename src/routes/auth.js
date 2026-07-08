@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sendOtp, verifyOtp } = require('../services/otp');
-const { db } = require('../services/firebase');
+const { db, authAdmin } = require('../services/firebase');
 
 /**
  * Validates basic phone format (digits only, reasonable length).
@@ -76,6 +76,42 @@ router.post('/verify-otp', async (req, res) => {
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ error: 'Internal server error during verification' });
+  }
+});
+
+// POST /api/auth/verify-firebase-token
+// Called by the app after Firebase Phone Auth confirms the OTP client-side.
+// We verify the ID token server-side, then create/update the user record.
+router.post('/verify-firebase-token', async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ error: 'idToken is required' });
+  }
+
+  try {
+    const decoded = await authAdmin.verifyIdToken(idToken);
+    const phone = decoded.phone_number;
+
+    if (!phone) {
+      return res.status(400).json({ error: 'No phone number found in token' });
+    }
+
+    const sanitizedPhone = phone.replace(/\D/g, '');
+    const userRef = db.ref('users/' + sanitizedPhone);
+    const snapshot = await userRef.get();
+    const now = new Date().toISOString();
+
+    const userData = { phone: sanitizedPhone, lastLoginAt: now };
+    if (!snapshot.exists()) {
+      userData.createdAt = now;
+    }
+    await userRef.update(userData);
+
+    res.json({ success: true, userId: sanitizedPhone });
+  } catch (error) {
+    console.error('Error verifying Firebase token:', error);
+    res.status(401).json({ success: false, error: 'Invalid or expired token' });
   }
 });
 

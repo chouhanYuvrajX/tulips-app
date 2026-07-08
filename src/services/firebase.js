@@ -1,5 +1,6 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getDatabase } = require('firebase-admin/database');
+const { getAuth } = require('firebase-admin/auth');
 require('dotenv').config();
 
 try {
@@ -17,5 +18,6 @@ try {
 }
 
 const db = getDatabase();
+const authAdmin = getAuth();
 
-module.exports = { db };
+module.exports = { db, authAdmin };
