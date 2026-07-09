@@ -1,30 +1,86 @@
 const otpStore = new Map();
 
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID;
+
+const twilioConfigured = Boolean(
+  TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_VERIFY_SERVICE_SID
+);
+
+function twilioAuthHeader() {
+  const creds = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+  return `Basic ${creds}`;
+}
+
 /**
- * Generates a 6-digit numeric OTP, stores it, and "sends" it (logs it for now).
+ * Sends an OTP via Twilio Verify if configured, otherwise falls back to
+ * generating a local code and logging it (dev mode).
  * @param {string} phone
  * @returns {Promise<{success: boolean}>}
  */
 async function sendOtp(phone) {
+  if (twilioConfigured) {
+    const res = await fetch(
+      `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/Verifications`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: twilioAuthHeader(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ To: `+${phone}`, Channel: 'sms' }),
+      }
+    );
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error('Twilio send error:', errBody);
+      throw new Error('Failed to send OTP via Twilio');
+    }
+
+    return { success: true };
+  }
+
+  // Dev-mode fallback: no Twilio keys set, generate + log locally.
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
-
   otpStore.set(phone, { code, expiresAt });
-
-  // TODO: replace console.log with real SMS provider (e.g. Twilio Verify or MSG91)
-  // once API keys are available — function signature stays the same, no caller changes needed.
-  console.log(`[OTP] Sending to ${phone}: ${code}`);
+  console.log(`[OTP DEV MODE - no Twilio keys set] Code for ${phone}: ${code}`);
 
   return { success: true };
 }
 
 /**
- * Verifies the stored code against what was sent, checks expiry.
+ * Verifies the OTP via Twilio Verify if configured, otherwise checks the
+ * locally stored dev-mode code.
  * @param {string} phone
  * @param {string} code
  * @returns {Promise<boolean>}
  */
 async function verifyOtp(phone, code) {
+  if (twilioConfigured) {
+    const res = await fetch(
+      `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: twilioAuthHeader(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ To: `+${phone}`, Code: code }),
+      }
+    );
+
+    if (!res.ok) {
+      return false;
+    }
+
+    const data = await res.json();
+    return data.status === 'approved';
+  }
+
+  // Dev-mode fallback.
   const record = otpStore.get(phone);
 
   if (!record) {
@@ -46,5 +102,5 @@ async function verifyOtp(phone, code) {
 
 module.exports = {
   sendOtp,
-  verifyOtp
+  verifyOtp,
 };
