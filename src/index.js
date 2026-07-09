@@ -4,6 +4,7 @@ const cors = require('cors');
 const chatRoute = require('./routes/chat');
 const authRoute = require('./routes/auth');
 const { chatRateLimit } = require('./middleware/rateLimiter');
+const checkSecret = require('./middleware/checkSecret');
 require('./services/firebase');
 
 const app = express();
@@ -30,11 +31,11 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/chat', chatRateLimit, chatRoute);
+app.use('/api/chat', checkSecret, chatRateLimit, chatRoute);
 app.use('/api/auth', authRoute);
 const path = require('path');
 const fs = require('fs');
-app.get('/audio/:id', (req, res) => {
+app.get('/audio/:id', checkSecret, (req, res) => {
   const filePath = path.join('/tmp', `${req.params.id}.mp3`);
   if (fs.existsSync(filePath)) {
     res.setHeader('Content-Type', 'audio/mpeg');
