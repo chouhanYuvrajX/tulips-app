@@ -1,8 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const chatRoute = require('./routes/chat');
 const authRoute = require('./routes/auth');
-require('dotenv').config();
+const { chatRateLimit } = require('./middleware/rateLimiter');
 require('./services/firebase');
 
 const app = express();
@@ -29,7 +30,7 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/chat', chatRoute);
+app.use('/api/chat', chatRateLimit, chatRoute);
 app.use('/api/auth', authRoute);
 const path = require('path');
 const fs = require('fs');
