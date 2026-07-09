@@ -79,4 +79,63 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+// POST /api/auth/google-signin
+router.post('/google-signin', async (req, res) => {
+  const { accessToken } = req.body;
+
+  if (!accessToken) {
+    return res.status(400).json({ error: 'accessToken is required' });
+  }
+
+  try {
+    const tokenInfoRes = await fetch(
+      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
+    );
+
+    if (!tokenInfoRes.ok) {
+      return res.status(401).json({ error: 'Invalid Google access token' });
+    }
+
+    const tokenInfo = await tokenInfoRes.json();
+
+    if (tokenInfo.aud !== process.env.GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Token audience mismatch' });
+    }
+
+    const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!profileRes.ok) {
+      return res.status(401).json({ error: 'Failed to fetch Google profile' });
+    }
+
+    const profile = await profileRes.json();
+    const userId = 'google_' + profile.sub;
+    const userRef = db.ref('users/' + userId);
+
+    const snapshot = await userRef.get();
+    const now = new Date().toISOString();
+
+    const userData = {
+      googleId: profile.sub,
+      email: profile.email || null,
+      name: profile.name || null,
+      picture: profile.picture || null,
+      lastLoginAt: now
+    };
+
+    if (!snapshot.exists()) {
+      userData.createdAt = now;
+    }
+
+    await userRef.update(userData);
+
+    res.json({ success: true, userId, email: userData.email, name: userData.name });
+  } catch (error) {
+    console.error('Error during Google sign-in:', error);
+    res.status(500).json({ error: 'Internal server error during Google sign-in' });
+  }
+});
+
 module.exports = router;
