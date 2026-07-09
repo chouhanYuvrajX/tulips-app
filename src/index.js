@@ -1,4 +1,9 @@
 require('dotenv').config();
+const validateEnv = require('./config/validateEnv');
+
+// Validate environment variables before anything else
+validateEnv();
+
 const express = require('express');
 const cors = require('cors');
 const chatRoute = require('./routes/chat');
