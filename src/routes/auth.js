@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sendOtp, verifyOtp } = require('../services/otp');
+const { hashPassword, verifyPassword } = require('../services/password');
 const { db } = require('../services/firebase');
 
 /**
@@ -21,6 +22,24 @@ function isValidPhone(phone) {
  */
 function sanitizePhone(phone) {
   return phone.replace(/\D/g, '');
+}
+
+/**
+ * Validates a basic email format.
+ * @param {string} email
+ * @returns {boolean}
+ */
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
+ * Sanitizes an email for use as a Firebase key (Firebase keys can't contain '.').
+ * @param {string} email
+ * @returns {string}
+ */
+function sanitizeEmail(email) {
+  return email.trim().toLowerCase().replace(/\./g, '_');
 }
 
 // POST /api/auth/send-otp
@@ -135,6 +154,77 @@ router.post('/google-signin', async (req, res) => {
   } catch (error) {
     console.error('Error during Google sign-in:', error);
     res.status(500).json({ error: 'Internal server error during Google sign-in' });
+  }
+});
+
+// POST /api/auth/email-signup
+router.post('/email-signup', async (req, res) => {
+  const { email, password, name } = req.body;
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+
+  try {
+    const userId = 'email_' + sanitizeEmail(email);
+    const userRef = db.ref('users/' + userId);
+    const snapshot = await userRef.get();
+
+    if (snapshot.exists()) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const passwordHash = await hashPassword(password);
+    const now = new Date().toISOString();
+
+    await userRef.set({
+      email: email.trim().toLowerCase(),
+      name: name || null,
+      passwordHash,
+      createdAt: now,
+      lastLoginAt: now,
+    });
+
+    res.json({ success: true, userId, email: email.trim().toLowerCase(), name: name || null });
+  } catch (error) {
+    console.error('Error during email sign-up:', error);
+    res.status(500).json({ error: 'Internal server error during sign-up' });
+  }
+});
+
+// POST /api/auth/email-login
+router.post('/email-login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!isValidEmail(email) || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  try {
+    const userId = 'email_' + sanitizeEmail(email);
+    const userRef = db.ref('users/' + userId);
+    const snapshot = await userRef.get();
+
+    if (!snapshot.exists()) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const userData = snapshot.val();
+    const isValid = await verifyPassword(password, userData.passwordHash);
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    await userRef.update({ lastLoginAt: new Date().toISOString() });
+
+    res.json({ success: true, userId, email: userData.email, name: userData.name });
+  } catch (error) {
+    console.error('Error during email login:', error);
+    res.status(500).json({ error: 'Internal server error during login' });
   }
 });
 
