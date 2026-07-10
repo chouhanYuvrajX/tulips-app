@@ -4,7 +4,8 @@ const requiredEnvVars = [
   'FIREBASE_PRIVATE_KEY',
   'FIREBASE_DATABASE_URL',
   'NVIDIA_API_KEY',
-  'GOOGLE_CLIENT_ID'
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_WEB_CLIENT_ID'
 ];
 
 function validateEnv() {

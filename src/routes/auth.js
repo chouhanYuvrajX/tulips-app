@@ -99,48 +99,44 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // POST /api/auth/google-signin
+// Verifies the idToken issued by @react-native-google-signin/google-signin (native flow).
 router.post('/google-signin', async (req, res) => {
-  const { accessToken } = req.body;
+  const { idToken } = req.body;
 
-  if (!accessToken) {
-    return res.status(400).json({ error: 'accessToken is required' });
+  if (!idToken) {
+    return res.status(400).json({ error: 'idToken is required' });
   }
 
   try {
     const tokenInfoRes = await fetch(
-      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
     );
 
     if (!tokenInfoRes.ok) {
-      return res.status(401).json({ error: 'Invalid Google access token' });
+      return res.status(401).json({ error: 'Invalid Google idToken' });
     }
 
     const tokenInfo = await tokenInfoRes.json();
 
-    if (tokenInfo.aud !== process.env.GOOGLE_CLIENT_ID) {
+    if (tokenInfo.aud !== process.env.GOOGLE_WEB_CLIENT_ID) {
       return res.status(401).json({ error: 'Token audience mismatch' });
     }
 
-    const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    if (!profileRes.ok) {
-      return res.status(401).json({ error: 'Failed to fetch Google profile' });
+    if (!tokenInfo.sub) {
+      return res.status(401).json({ error: 'Invalid Google token payload' });
     }
 
-    const profile = await profileRes.json();
-    const userId = 'google_' + profile.sub;
+    const userId = 'google_' + tokenInfo.sub;
     const userRef = db.ref('users/' + userId);
 
     const snapshot = await userRef.get();
     const now = new Date().toISOString();
 
     const userData = {
-      googleId: profile.sub,
-      email: profile.email || null,
-      name: profile.name || null,
-      picture: profile.picture || null,
+      googleId: tokenInfo.sub,
+      email: tokenInfo.email || null,
+      name: tokenInfo.name || null,
+      picture: tokenInfo.picture || null,
       lastLoginAt: now
     };
 
