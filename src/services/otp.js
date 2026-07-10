@@ -8,6 +8,21 @@ const twilioConfigured = Boolean(
   TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_VERIFY_SERVICE_SID
 );
 
+/**
+ * Formats a phone number to E.164 (e.g. +919876543210).
+ * Bare 10-digit numbers are assumed to be Indian (+91).
+ * Numbers that already include a country code (11-15 digits) are passed through.
+ * @param {string} phone
+ * @returns {string}
+ */
+function toE164(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+  return `+${digits}`;
+}
+
 function twilioAuthHeader() {
   const creds = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
   return `Basic ${creds}`;
@@ -29,7 +44,7 @@ async function sendOtp(phone) {
           Authorization: twilioAuthHeader(),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ To: `+${phone}`, Channel: 'sms' }),
+        body: new URLSearchParams({ To: toE164(phone), Channel: 'sms' }),
       }
     );
 
@@ -68,7 +83,7 @@ async function verifyOtp(phone, code) {
           Authorization: twilioAuthHeader(),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ To: `+${phone}`, Code: code }),
+        body: new URLSearchParams({ To: toE164(phone), Code: code }),
       }
     );
 
