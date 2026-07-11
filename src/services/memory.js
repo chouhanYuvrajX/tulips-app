@@ -172,7 +172,42 @@ Extract any NEW information and format strictly as the specified JSON object.`;
   }
 }
 
+/**
+ * Builds a natural-language memory summary block to append to a companion's
+ * system prompt. Fetches the user's name separately from profile/name.
+ * Never throws — returns an empty string on any failure so chat always works.
+ */
+async function buildMemoryPromptBlock(userId) {
+  try {
+    const [memory, nameSnapshot] = await Promise.all([
+      getMemory(userId),
+      db.ref(`users/${userId}/profile/name`).once('value'),
+    ]);
+
+    const name = nameSnapshot.exists() ? nameSnapshot.val() : null;
+    const join = (arr) => (arr && arr.length ? arr.join(', ') : 'none yet');
+
+    return `
+
+---
+What you remember about this user:
+Name: ${name || 'not yet known'}
+Goals: ${join(memory.goals)}
+Struggles: ${join(memory.struggles)}
+Important people: ${join(memory.importantPeople)}
+Milestones: ${join(memory.milestones)}
+Emotional patterns: ${join(memory.emotionalPatterns)}
+
+Use this naturally in conversation. Don't list it back robotically — refer to it the way a close friend would.
+---`;
+  } catch (error) {
+    console.error(`[Memory] Failed to build memory prompt block for user ${userId}:`, error);
+    return '';
+  }
+}
+
 module.exports = {
   getMemory,
-  extractAndSaveMemory
+  extractAndSaveMemory,
+  buildMemoryPromptBlock
 };

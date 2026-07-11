@@ -4,7 +4,7 @@ const { getAIResponse } = require('../services/ai.js');
 const { getSystemPrompt } = require('../services/companions.js');
 const { addMessage, getHistory } = require('../services/conversation.js');
 const { generateSpeech } = require('../services/tts.js');
-const { extractAndSaveMemory } = require('../services/memory.js');
+const { extractAndSaveMemory, buildMemoryPromptBlock } = require('../services/memory.js');
 
 router.post('/', async (req, res) => {
     const { message, conversationId, userId, companionId, language, voiceSpeed, voiceEnabled } = req.body;
@@ -34,7 +34,9 @@ router.post('/', async (req, res) => {
     try {
         const history = await getHistory(userId, conversationId);
         await addMessage(userId, conversationId, 'user', message);
-        const systemPrompt = getSystemPrompt(companionId);
+        const baseSystemPrompt = getSystemPrompt(companionId);
+        const memoryBlock = await buildMemoryPromptBlock(userId);
+        const systemPrompt = baseSystemPrompt + memoryBlock;
         const aiReply = await getAIResponse(message, history, systemPrompt);
         await addMessage(userId, conversationId, 'assistant', aiReply);
 
