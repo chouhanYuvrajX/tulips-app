@@ -4,6 +4,7 @@ const { getAIResponse } = require('../services/ai.js');
 const { getSystemPrompt } = require('../services/companions.js');
 const { addMessage, getHistory } = require('../services/conversation.js');
 const { generateSpeech } = require('../services/tts.js');
+const { extractAndSaveMemory } = require('../services/memory.js');
 
 router.post('/', async (req, res) => {
     const { message, conversationId, userId, companionId, language, voiceSpeed, voiceEnabled } = req.body;
@@ -46,6 +47,11 @@ router.post('/', async (req, res) => {
             reply: aiReply, 
             conversationId, 
             audioBase64: audioBase64 || null
+        });
+
+        // Fire-and-forget memory extraction in the background
+        extractAndSaveMemory(userId, message, aiReply).catch(err => {
+            console.error('[Chat Route] Error in background extractAndSaveMemory:', err);
         });
     } catch (error) {
         console.error('Error in /api/chat:', error);

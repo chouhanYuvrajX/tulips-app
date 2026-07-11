@@ -47,4 +47,5 @@ async function getAIResponse(userMessage, history = [], systemPrompt) {
 module.exports = {
   getAIResponse,
   DEFAULT_SYSTEM_PROMPT,
+  createClient,
 };
