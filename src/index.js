@@ -9,6 +9,7 @@ const cors = require('cors');
 const chatRoute = require('./routes/chat');
 const authRoute = require('./routes/auth');
 const memoryRoute = require('./routes/memory');
+const voiceRoute = require('./routes/voice');
 const { chatRateLimit } = require('./middleware/rateLimiter');
 const checkSecret = require('./middleware/checkSecret');
 require('./services/firebase');
@@ -40,6 +41,7 @@ app.use(express.json());
 app.use('/api/chat', checkSecret, chatRateLimit, chatRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/memory', checkSecret, memoryRoute);
+app.use('/voice', checkSecret, voiceRoute);
 const path = require('path');
 const fs = require('fs');
 app.get('/audio/:id', checkSecret, (req, res) => {
