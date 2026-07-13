@@ -27,7 +27,7 @@ async function getAIResponse(userMessage, history = [], systemPrompt) {
       model,
       messages,
       temperature: 0.7,
-      max_tokens: 1024,
+      max_tokens: 180,
     });
 
     const reply = completion.choices[0]?.message?.content;
